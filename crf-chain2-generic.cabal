@@ -26,11 +26,17 @@ library
       , vector-binary
       , logfloat
       , parallel
+      , monad-codec >= 0.2 && < 0.3
+      , data-lens
+      , comonad-transformers
 
     exposed-modules:
         Data.CRF.Chain2.Generic.Base
+      , Data.CRF.Chain2.Generic.External
       , Data.CRF.Chain2.Generic.Model
       , Data.CRF.Chain2.Generic.Inference
+      , Data.CRF.Chain2.Pair.Base
+      , Data.CRF.Chain2.Pair.Codec
 
     other-modules:
         Data.CRF.Chain2.Generic.Internal
