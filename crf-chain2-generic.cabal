@@ -1,0 +1,41 @@
+name:               crf-chain2-generic
+version:            0.1.1
+synopsis:           Second-order, generic, constrained, linear conditional random fields
+description:
+    The library provides implementation of the second-order, linear
+    conditional random fields (CRFs) with position-wise constraints
+    imposed over label values and generic feature generation.
+license:            BSD3
+license-file:       LICENSE
+cabal-version:      >= 1.6
+copyright:          Copyright (c) 2011 Jakub Waszczuk, 2012 IPI PAN
+author:             Jakub Waszczuk
+maintainer:         waszczuk.kuba@gmail.com
+stability:          experimental
+category:           Math
+homepage:           https://github.com/kawu/crf-chain2-generic
+build-type:         Simple
+
+library
+    build-depends:
+        base >= 4 && < 5
+      , containers
+      , array
+      , vector
+      , binary
+      , vector-binary
+      , logfloat
+      , parallel
+
+    exposed-modules:
+        Data.CRF.Chain2.Generic
+
+    other-modules:
+        Data.CRF.Chain2.DP
+      , Data.CRF.Chain2.Util
+        
+--     ghc-options: -Wall -O2
+
+source-repository head
+    type: git
+    location: git://github.com/kawu/crf-chain2-generic.git
