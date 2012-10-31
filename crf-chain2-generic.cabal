@@ -1,5 +1,5 @@
 name:               crf-chain2-generic
-version:            0.1.1
+version:            0.1.0
 synopsis:           Second-order, generic, constrained, linear conditional random fields
 description:
     The library provides implementation of the second-order, linear
@@ -28,11 +28,14 @@ library
       , parallel
 
     exposed-modules:
-        Data.CRF.Chain2.Generic
+        Data.CRF.Chain2.Generic.Base
+      , Data.CRF.Chain2.Generic.Model
+      , Data.CRF.Chain2.Generic.Inference
 
     other-modules:
-        Data.CRF.Chain2.DP
-      , Data.CRF.Chain2.Util
+        Data.CRF.Chain2.Generic.Internal
+      , Data.CRF.Chain2.Generic.DP
+      , Data.CRF.Chain2.Generic.Util
         
 --     ghc-options: -Wall -O2
 

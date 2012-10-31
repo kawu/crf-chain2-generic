@@ -1,4 +1,4 @@
-module Data.CRF.Chain2.DP
+module Data.CRF.Chain2.Generic.DP
 ( table
 , flexible2
 , flexible3
