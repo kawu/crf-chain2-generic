@@ -35,12 +35,12 @@ type AccF = [L.LogFloat] -> L.LogFloat
 
 type ProbArray = LbIx -> LbIx -> LbIx -> L.LogFloat
 
-computePsi :: Ord f => CRF o t f -> Xs o t -> Int -> LbIx -> L.LogFloat
+computePsi :: Ord f => Model o t f -> Xs o t -> Int -> LbIx -> L.LogFloat
 computePsi crf xs i = (A.!) $ A.array (0, lbNum xs i - 1)
     [ (k, onWord crf xs i k)
     | k <- lbIxs xs i ]
 
-forward :: Ord f => AccF -> CRF o t f -> Xs o t -> ProbArray
+forward :: Ord f => AccF -> Model o t f -> Xs o t -> ProbArray
 forward acc crf sent = alpha where
     alpha = DP.flexible3 (-1, V.length sent - 1)
                 (\i   -> (0, lbNum sent i - 1))
@@ -53,7 +53,7 @@ forward acc crf sent = alpha where
             * onTransition crf sent i j k h
             | h <- lbIxs sent (i - 2) ]
 
-backward :: Ord f => AccF -> CRF o t f -> Xs o t -> ProbArray
+backward :: Ord f => AccF -> Model o t f -> Xs o t -> ProbArray
 backward acc crf sent = beta where
     beta = DP.flexible3 (0, V.length sent)
                (\i   -> (0, lbNum sent (i - 1) - 1))
@@ -77,10 +77,10 @@ zxAlpha acc sent alpha = acc
     -- | (i, j) <- lbIxs2 sent (n - 1) ]
     where n = V.length sent
 
-zx :: Ord f => CRF o t f -> Xs o t -> L.LogFloat
+zx :: Ord f => Model o t f -> Xs o t -> L.LogFloat
 zx crf = zxBeta . backward sum crf
 
-zx' :: Ord f => CRF o t f -> Xs o t -> L.LogFloat
+zx' :: Ord f => Model o t f -> Xs o t -> L.LogFloat
 zx' crf sent = zxAlpha sum sent (forward sum crf sent)
 
 argmax :: (Ord b) => (a -> b) -> [a] -> (a, b)
@@ -89,7 +89,7 @@ argmax f l = foldl1 choice $ map (\x -> (x, f x)) l
               | v1 > v2 = (x1, v1)
               | otherwise = (x2, v2)
 
-tagIxs :: Ord f => CRF o t f -> Xs o t -> [Int]
+tagIxs :: Ord f => Model o t f -> Xs o t -> [Int]
 tagIxs crf sent = collectMaxArg (0, 0, 0) [] mem where
     mem = DP.flexible3 (0, V.length sent)
                        (\i   -> (0, lbNum sent (i - 1) - 1))
@@ -107,12 +107,12 @@ tagIxs crf sent = collectMaxArg (0, 0, 0) [] mem where
                   | h == -1 = reverse acc
                   | otherwise = collectMaxArg (i + 1, h, j) (h:acc) mem
 
-tag :: Ord f => CRF o t f -> Xs o t -> [t]
+tag :: Ord f => Model o t f -> Xs o t -> [t]
 tag crf sent =
     let ixs = tagIxs crf sent
     in  [lbAt x i | (x, i) <- zip (V.toList sent) ixs]
 
-probs :: Ord f => CRF o t f -> Xs o t -> [[L.LogFloat]]
+probs :: Ord f => Model o t f -> Xs o t -> [[L.LogFloat]]
 probs crf sent =
     let alpha = forward maximum crf sent
         beta = backward maximum crf sent
@@ -125,7 +125,7 @@ probs crf sent =
     in  [ normalize [m1 i k | k <- lbIxs sent i]
         | i <- [0 .. V.length sent - 1] ]
 
-marginals :: Ord f => CRF o t f -> Xs o t -> [[L.LogFloat]]
+marginals :: Ord f => Model o t f -> Xs o t -> [[L.LogFloat]]
 marginals crf sent =
     let alpha = forward sum crf sent
         beta = backward sum crf sent
@@ -133,7 +133,7 @@ marginals crf sent =
           | k <- lbIxs sent i ]
         | i <- [0 .. V.length sent - 1] ]
 
-goodAndBad :: (Eq t, Ord f) => CRF o t f -> Xs o t -> Ys t -> (Int, Int)
+goodAndBad :: (Eq t, Ord f) => Model o t f -> Xs o t -> Ys t -> (Int, Int)
 goodAndBad crf xs ys =
     foldl gather (0, 0) $ zip labels labels'
   where
@@ -147,13 +147,13 @@ goodAndBad crf xs ys =
         | x == y = (good + 1, bad)
         | otherwise = (good, bad + 1)
 
-goodAndBad' :: (Eq t, Ord f) => CRF o t f -> [(Xs o t, Ys t)] -> (Int, Int)
+goodAndBad' :: (Eq t, Ord f) => Model o t f -> [(Xs o t, Ys t)] -> (Int, Int)
 goodAndBad' crf dataset =
     let add (g, b) (g', b') = (g + g', b + b')
     in  foldl add (0, 0) [goodAndBad crf x y | (x, y) <- dataset]
 
 -- | Compute the accuracy of the model with respect to the labeled dataset.
-accuracy :: (Eq t, Ord f) => CRF o t f -> [(Xs o t, Ys t)] -> Double
+accuracy :: (Eq t, Ord f) => Model o t f -> [(Xs o t, Ys t)] -> Double
 accuracy crf dataset =
     let k = numCapabilities
     	parts = partition k dataset
@@ -163,7 +163,7 @@ accuracy crf dataset =
     in  fromIntegral good / fromIntegral (good + bad)
 
 prob3
-    :: Ord f => CRF o t f -> ProbArray -> ProbArray -> Xs o t
+    :: Ord f => Model o t f -> ProbArray -> ProbArray -> Xs o t
     -> Int -> (LbIx -> L.LogFloat) -> LbIx -> LbIx -> LbIx
     -> L.LogFloat
 prob3 crf alpha beta sent k psiMem x y z =
@@ -172,21 +172,21 @@ prob3 crf alpha beta sent k psiMem x y z =
 {-# INLINE prob3 #-}
 
 prob2
-    :: CRF o t f -> ProbArray -> ProbArray
+    :: Model o t f -> ProbArray -> ProbArray
     -> Xs o t -> Int -> LbIx -> LbIx -> L.LogFloat
 prob2 crf alpha beta sent k x y =
     alpha k x y * beta (k + 1) x y / zxBeta beta
 {-# INLINE prob2 #-}
 
 prob1
-    :: CRF o t f -> ProbArray -> ProbArray
+    :: Model o t f -> ProbArray -> ProbArray
     -> Xs o t -> Int -> LbIx -> L.LogFloat
 prob1 crf alpha beta sent k x = sum
     [ prob2 crf alpha beta sent k x y
     | y <- lbIxs sent (k - 1) ]
 
 expectedFeaturesOn
-    :: Ord f => CRF o t f -> ProbArray -> ProbArray
+    :: Ord f => Model o t f -> ProbArray -> ProbArray
     -> Xs o t -> Int -> [(f, L.LogFloat)]
 expectedFeaturesOn crf alpha beta sent k =
     fs3 ++ fs1
@@ -204,7 +204,7 @@ expectedFeaturesOn crf alpha beta sent k =
                 , let pr = pr3 a b c
                 , ft <- trFeatsOn crf sent k a b c ]
 
-expectedFeaturesIn :: Ord f => CRF o t f -> Xs o t -> [(f, L.LogFloat)]
+expectedFeaturesIn :: Ord f => Model o t f -> Xs o t -> [(f, L.LogFloat)]
 expectedFeaturesIn crf sent =
     -- force parallel computation of alpha and beta tables
     zx1 `par` zx2 `pseq` zx1 `pseq` concat

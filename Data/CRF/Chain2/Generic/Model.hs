@@ -4,7 +4,8 @@
 module Data.CRF.Chain2.Generic.Model
 ( FeatIx (..)
 , FeatGen (..)
-, CRF (..)
+, Model (..)
+, mkModel
 , phi
 , obFeatsOn
 , trFeatsOn
@@ -15,9 +16,11 @@ module Data.CRF.Chain2.Generic.Model
 , lbIxs
 ) where
 
+import Control.Applicative ((<$>), (<*>))
 import Data.Maybe (maybeToList)
 import Data.Binary (Binary)
 import Data.Vector.Binary ()
+import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as U
@@ -41,50 +44,83 @@ data FeatGen o t f = FeatGen
     , trFeats3  :: t -> t -> t -> [f] }
 
 -- | A conditional random field.
-data CRF o t f = CRF
+data Model o t f = Model
     { values    :: U.Vector Double
     , ixMap     :: M.Map f FeatIx
     , featGen   :: FeatGen o t f }
 
+-- | FINISH: Dodać ekstrację liczby cech ze zbioru danych,
+-- zmienić funkcję mkModel.
+mkModel :: Ord f => FeatGen o t f -> [Xs o t] -> Model o t f
+mkModel fg dataset = Model
+    { values    = U.replicate (S.size fs) 0.0 
+    , ixMap     =
+        let featIxs = map FeatIx [0..]
+            featLst = S.toList fs
+        in  M.fromList (zip featLst featIxs)
+    , featGen   = fg }
+  where
+    fs = S.fromList $ concatMap ((++) <$> obFs <*> trFs) dataset
+    obFs xs = concat
+        [ _obFeatsOn fg xs i u
+        | i <- [0 .. V.length xs - 1]
+        , u <- lbIxs xs i ]
+    trFs xs = concat
+        [ _trFeatsOn fg xs i u v w
+        | i <- [0 .. V.length xs - 1]
+        , u <- lbIxs xs i
+        , v <- lbIxs xs $ i - 1
+        , w <- lbIxs xs $ i - 2 ]
+
 -- | Potential assigned to the feature -- exponential of the
 -- corresonding parameter.
-phi :: Ord f => CRF o t f -> f -> L.LogFloat
-phi CRF{..} ft = case M.lookup ft ixMap of
+phi :: Ord f => Model o t f -> f -> L.LogFloat
+phi Model{..} ft = case M.lookup ft ixMap of
     Just ix -> L.logToLogFloat (values U.! unFeatIx ix)
     Nothing -> L.logToLogFloat (0 :: Float)
 {-# INLINE phi #-}
 
-obFeatsOn :: CRF o t f -> Xs o t -> Int -> LbIx -> [f]
-obFeatsOn crf xs i u = concat
+_obFeatsOn :: FeatGen o t f -> Xs o t -> Int -> LbIx -> [f]
+_obFeatsOn featGen xs i u = concat
     [ feats ob e
     | e  <- lbs
     , ob <- unX (xs V.! i) ]
   where 
-    feats   = obFeats (featGen crf)
+    feats   = obFeats featGen
     lbs     = maybeToList (lbOn xs i u)
+{-# INLINE _obFeatsOn #-}
+
+obFeatsOn :: Model o t f -> Xs o t -> Int -> LbIx -> [f]
+obFeatsOn crf = _obFeatsOn (featGen crf)
 {-# INLINE obFeatsOn #-}
 
-trFeatsOn
-    :: CRF o t f -> Xs o t -> Int
+_trFeatsOn
+    :: FeatGen o t f -> Xs o t -> Int
     -> LbIx -> LbIx -> LbIx -> [f]
-trFeatsOn crf xs i u v w =
+_trFeatsOn featGen xs i u v w =
     doIt a b c
   where
     a = lbOn xs i       u
     b = lbOn xs (i - 1) v
     c = lbOn xs (i - 2) w
-    doIt (Just u) (Just v) (Just w) = trFeats3 (featGen crf) u v w
-    doIt (Just u) (Just v) _        = trFeats2 (featGen crf) u v
-    doIt (Just u) _ _               = trFeats1 (featGen crf) u
+    doIt (Just u) (Just v) (Just w) = trFeats3 featGen u v w
+    doIt (Just u) (Just v) _        = trFeats2 featGen u v
+    doIt (Just u) _ _               = trFeats1 featGen u
+{-# INLINE _trFeatsOn #-}
+
+trFeatsOn
+    :: Model o t f -> Xs o t -> Int
+    -> LbIx -> LbIx -> LbIx -> [f]
+trFeatsOn crf = _trFeatsOn (featGen crf)
 {-# INLINE trFeatsOn #-}
 
-onWord :: Ord f => CRF o t f -> Xs o t -> Int -> LbIx -> L.LogFloat
+onWord :: Ord f => Model o t f -> Xs o t -> Int -> LbIx -> L.LogFloat
 onWord crf xs i u =
     product . map (phi crf) $ obFeatsOn crf xs i u
 {-# INLINE onWord #-}
 
 onTransition
-    :: Ord f => CRF o t f -> Xs o t -> Int
+    :: Ord f => Model o t f -> Xs o t -> Int
     -> LbIx -> LbIx -> LbIx -> L.LogFloat
 onTransition crf xs i u w v =
     product . map (phi crf) $ trFeatsOn crf xs i u w v
