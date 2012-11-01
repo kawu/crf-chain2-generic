@@ -4,7 +4,7 @@ module Data.CRF.Chain2.Generic.Inference
 ( tag
 , probs
 , marginals
-, expectedFeaturesIn
+, expectedFeatures
 , accuracy
 , zx
 , zx'
@@ -196,16 +196,18 @@ expectedFeaturesOn crf alpha beta sent k =
           fs1 = [ (ft, pr) 
                 | a <- lbIxs sent k
                 , let pr = pr1 a
-                , ft <- obFeatsOn crf sent k a ]
+                , ft <- obFs a ]
     	  fs3 = [ (ft, pr) 
                 | a <- lbIxs sent k
                 , b <- lbIxs sent $ k - 1
                 , c <- lbIxs sent $ k - 2
                 , let pr = pr3 a b c
-                , ft <- trFeatsOn crf sent k a b c ]
+                , ft <- trFs a b c ]
+          obFs = obFeatsOn (featGen crf) sent k
+          trFs = trFeatsOn (featGen crf) sent k
 
-expectedFeaturesIn :: Ord f => Model o t f -> Xs o t -> [(f, L.LogFloat)]
-expectedFeaturesIn crf sent =
+expectedFeatures :: Ord f => Model o t f -> Xs o t -> [(f, L.LogFloat)]
+expectedFeatures crf sent =
     -- force parallel computation of alpha and beta tables
     zx1 `par` zx2 `pseq` zx1 `pseq` concat
       [ expectedFeaturesOn crf alpha beta sent k

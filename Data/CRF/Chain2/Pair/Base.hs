@@ -6,7 +6,7 @@ module Data.CRF.Chain2.Pair.Base
 , Lb2 (..)
 , Lb
 , Feat (..)
-, featGen
+, pairFeatGen
 ) where
 
 import Data.Binary (Binary)
@@ -29,8 +29,8 @@ data Feat
     | TFeat1'2  {-# UNPACK #-} !Lb2
     deriving (Show, Eq, Ord)
 
-featGen :: FeatGen Ob (Lb1, Lb2) Feat
-featGen = FeatGen
+pairFeatGen :: FeatGen Ob (Lb1, Lb2) Feat
+pairFeatGen = FeatGen
     { obFeats   = obFeats'
     , trFeats1  = trFeats1'
     , trFeats2  = trFeats2'
