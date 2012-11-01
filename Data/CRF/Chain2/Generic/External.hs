@@ -1,5 +1,5 @@
 module Data.CRF.Chain2.Generic.External
-( Word (..)
+( Word (obs, lbs)
 , mkWord
 , Sent
 , Dist (unDist)

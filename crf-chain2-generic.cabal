@@ -1,5 +1,5 @@
 name:               crf-chain2-generic
-version:            0.1.0
+version:            0.1.1
 synopsis:           Second-order, generic, constrained, linear conditional random fields
 description:
     The library provides implementation of the second-order, linear

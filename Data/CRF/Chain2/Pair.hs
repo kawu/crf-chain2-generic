@@ -1,8 +1,21 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Data.CRF.Chain2.Pair
-( CRF (..)
+( 
+-- * Data types
+  Word (..)
+, mkWord
+, Sent
+, Dist (unDist)
+, mkDist
+, WordL
+, SentL
+
+-- * CRF
+, CRF (..)
+-- ** Training
 , train
+-- ** Tagging
 , tag
 ) where
 
@@ -11,7 +24,7 @@ import Data.Binary (Binary, get, put)
 import qualified Numeric.SGD as SGD
 
 import Data.CRF.Chain2.Generic.Model (Model, core, withCore)
-import Data.CRF.Chain2.Generic.External (SentL, Sent)
+import Data.CRF.Chain2.Generic.External
 import qualified Data.CRF.Chain2.Generic.Inference as I
 import qualified Data.CRF.Chain2.Generic.Train as T
 
@@ -29,8 +42,8 @@ instance (Ord a, Ord b, Ord c, Binary a, Binary b, Binary c)
         _core <- get
         return $ withCore _core featGen
 
-codecSpec :: (Ord a, Ord b, Ord c) => T.CodecSpc a (b, c) (Codec a b c) Ob Lb
-codecSpec = T.CodecSpc
+codecSpec :: (Ord a, Ord b, Ord c) => T.CodecSpec a (b, c) (Codec a b c) Ob Lb
+codecSpec = T.CodecSpec
     { T.mkCodec = mkCodec
     , T.encode  = encodeDataL }
 

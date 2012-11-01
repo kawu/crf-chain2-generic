@@ -2,7 +2,7 @@
 {-# LANGUAGE PatternGuards #-}
 
 module Data.CRF.Chain2.Generic.Train
-( CodecSpc (..)
+( CodecSpec (..)
 , train
 ) where
 
@@ -19,7 +19,7 @@ import Data.CRF.Chain2.Generic.Model
 import Data.CRF.Chain2.Generic.Inference (expectedFeatures, accuracy)
 
 -- | A codec specification.
-data CodecSpc a b c o t = CodecSpc
+data CodecSpec a b c o t = CodecSpec
     { mkCodec :: [SentL a b] -> (c, [(Xs o t, Ys t)])
     , encode  :: c -> [SentL a b] -> [(Xs o t, Ys t)] }
 
@@ -31,12 +31,12 @@ data CodecSpc a b c o t = CodecSpc
 train
     :: (Ord a, Ord b, Eq t, Ord f)
     => SGD.SgdArgs                  -- ^ Args for SGD
-    -> CodecSpc a b c o t           -- ^ Codec specification
+    -> CodecSpec a b c o t          -- ^ Codec specification
     -> FeatGen o t f                -- ^ Feature generation
     -> IO [SentL a b]               -- ^ Training data 'IO' action
     -> Maybe (IO [SentL a b])       -- ^ Maybe evalation data
     -> IO (c, Model o t f)          -- ^ Resulting codec and model
-train sgdArgs CodecSpc{..} ftGen trainIO evalIO'Maybe = do
+train sgdArgs CodecSpec{..} ftGen trainIO evalIO'Maybe = do
     hSetBuffering stdout NoBuffering
     (codec, trainData) <- mkCodec <$> trainIO
     evalDataM <- case evalIO'Maybe of
