@@ -1,8 +1,9 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE PatternGuards #-}
 
-module Data.CRF.Chain2.Pair.Train
-( CRF (..)
+module Data.CRF.Chain2.Generic.Train
+( CodecSpc (..)
+, CRF (..)
 , train
 ) where
 
@@ -17,28 +18,24 @@ import qualified Numeric.SGD as SGD
 import qualified Numeric.SGD.LogSigned as L
 
 import Data.CRF.Chain2.Generic.Base
-import Data.CRF.Chain2.Generic.External
+import Data.CRF.Chain2.Generic.External (SentL)
 import Data.CRF.Chain2.Generic.Model
 import Data.CRF.Chain2.Generic.Inference (expectedFeatures, accuracy)
-import Data.CRF.Chain2.Pair.Base
-import Data.CRF.Chain2.Pair.Codec
 
--- import Data.CRF.Chain1.Constrained.Dataset.Internal
--- import Data.CRF.Chain1.Constrained.Dataset.External (SentL, unknown, unDist)
--- import Data.CRF.Chain1.Constrained.Feature (Feature, featuresIn)
--- import Data.CRF.Chain1.Constrained.Model
---     (Model (..), mkModel, FeatIx (..), featToJustInt)
--- import Data.CRF.Chain1.Constrained.Inference (accuracy, expectedFeaturesIn)
+-- | A codec specification.
+data CodecSpc a b c o t = CodecSpc
+    { mkCodec :: [SentL a b] -> (c, [(Xs o t, Ys t)])
+    , encode  :: c -> [SentL a b] -> [(Xs o t, Ys t)] }
 
 -- | A conditional random field model with additional codec used for
 -- data encoding.
-data CRF a b c = CRF {
+data CRF c o t f = CRF {
     -- | The codec is used to transform data into internal representation,
     -- where each observation and each label is represented by a unique
     -- integer number.
-    codec :: Codec a b c,
+    codec :: c,
     -- | The actual model, which is a map from 'Feature's to potentials.
-    model :: Model Ob Lb Feat }
+    model :: Model o t f }
 
 -- Dodać informacje o typie funckji FeatGen używanej w modelu.
 -- instance (Ord a, Ord b, Binary a, Binary b) => Binary (CRF a b) where
@@ -51,24 +48,26 @@ data CRF a b c = CRF {
 -- on the evaluation part every full iteration over the training part.
 -- TODO: Add custom feature extraction function.
 train
-    :: (Ord a, Ord b, Ord c)
+    :: (Ord a, Ord b, Eq t, Ord f)
     => SGD.SgdArgs                  -- ^ Args for SGD
-    -> IO [SentL a (b, c)]          -- ^ Training data 'IO' action
-    -> Maybe (IO [SentL a (b, c)])  -- ^ Maybe evalation data
-    -> IO (CRF a b c)               -- ^ Resulting model
-train sgdArgs trainIO evalIO'Maybe = do
+    -> CodecSpc a b c o t           -- ^ Codec specification
+    -> FeatGen o t f                -- ^ Feature generation
+    -> IO [SentL a b]               -- ^ Training data 'IO' action
+    -> Maybe (IO [SentL a b])       -- ^ Maybe evalation data
+    -> IO (CRF c o t f)             -- ^ Resulting model
+train sgdArgs CodecSpc{..} ftGen trainIO evalIO'Maybe = do
     hSetBuffering stdout NoBuffering
     (_codec, trainData) <- mkCodec <$> trainIO
     evalDataM <- case evalIO'Maybe of
-        Just evalIO -> Just . encodeDataL _codec <$> evalIO
+        Just evalIO -> Just . encode _codec <$> evalIO
         Nothing     -> return Nothing
-    let crf = mkModel pairFeatGen (map fst trainData)
+    let crf = mkModel ftGen (map fst trainData)
     para <- SGD.sgdM sgdArgs
         (notify sgdArgs crf trainData evalDataM)
         (gradOn crf) (V.fromList trainData) (values crf)
     return $ CRF _codec (crf { values = para })
 
-gradOn :: Model Ob Lb Feat -> SGD.Para -> (Xs Ob Lb, Ys Lb) -> SGD.Grad
+gradOn :: Ord f => Model o t f -> SGD.Para -> (Xs o t, Ys t) -> SGD.Grad
 gradOn crf para (xs, ys) = SGD.fromLogList $
     [ (ix, L.fromPos val)
     | (ft, val) <- presentFeats (featGen curr) xs ys
@@ -80,8 +79,8 @@ gradOn crf para (xs, ys) = SGD.fromLogList $
     curr = crf { values = para }
 
 notify
-    :: SGD.SgdArgs -> Model Ob Lb Feat -> [(Xs Ob Lb, Ys Lb)]
-    -> Maybe [(Xs Ob Lb, Ys Lb)] -> SGD.Para -> Int -> IO ()
+    :: (Eq t, Ord f) => SGD.SgdArgs -> Model o t f -> [(Xs o t, Ys t)]
+    -> Maybe [(Xs o t, Ys t)] -> SGD.Para -> Int -> IO ()
 notify SGD.SgdArgs{..} crf trainData evalDataM para k 
     | doneTotal k == doneTotal (k - 1) = putStr "."
     | Just dataSet <- evalDataM = do
