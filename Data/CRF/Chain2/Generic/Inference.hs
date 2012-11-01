@@ -12,8 +12,6 @@ module Data.CRF.Chain2.Generic.Inference
 
 import Data.Ord (comparing)
 import Data.List (maximumBy)
-import qualified Data.Set as S
-import qualified Data.Map as M
 import qualified Data.Array as A
 import qualified Data.Vector as V
 import qualified Data.Number.LogFloat as L
@@ -174,7 +172,7 @@ prob3 crf alpha beta sent k psiMem x y z =
 prob2
     :: Model o t f -> ProbArray -> ProbArray
     -> Xs o t -> Int -> LbIx -> LbIx -> L.LogFloat
-prob2 crf alpha beta sent k x y =
+prob2 _ alpha beta _ k x y =
     alpha k x y * beta (k + 1) x y / zxBeta beta
 {-# INLINE prob2 #-}
 

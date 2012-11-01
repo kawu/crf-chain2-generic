@@ -1,5 +1,5 @@
 module Data.CRF.Chain2.Pair.Codec
-( Codec (..)
+( Codec
 , CodecM
 , obMax
 , lb1Max
@@ -19,6 +19,7 @@ module Data.CRF.Chain2.Pair.Codec
 
 , decodeLabel
 , decodeLabels
+, unJust
 
 , mkCodec
 , encodeData
@@ -262,20 +263,25 @@ decodeLabel codec = C.evalCodec codec . decodeLabel'C
 decodeLabels :: (Ord b, Ord c) => Codec a b c -> [Lb] -> [Maybe (b, c)]
 decodeLabels codec = C.evalCodec codec . mapM decodeLabel'C
 
--- hasLabel :: Ord b => Codec a b -> b -> Bool
--- hasLabel codec x = M.member (Just x) (C.to $ snd codec)
--- {-# INLINE hasLabel #-}
--- 
--- -- | Return the label when 'Just' or one of the unknown values
--- -- when 'Nothing'.
--- unJust :: Ord b => Codec a b -> Word a b -> Maybe b -> b
--- unJust _ _ (Just x) = x
--- unJust codec word Nothing = case allUnk of
---     (x:_)   -> x
---     []      -> error "unJust: Nothing and all values known"
---   where
---     allUnk = filter (not . hasLabel codec) (S.toList $ lbs word)
--- 
+hasLabel :: (Ord b, Ord c) => Codec a b c -> (b, c) -> Bool
+hasLabel codec (x, y)
+    =  M.member (Just x) (C.to $ _2 codec)
+    && M.member (Just y) (C.to $ _3 codec)
+{-# INLINE hasLabel #-}
+
+-- | Return the label when 'Just' or one of the unknown values
+-- when 'Nothing'.
+unJust
+    :: (Ord b, Ord c) => Codec a b c
+    -> Word a (b, c) -> Maybe (b, c)
+    -> (b, c)
+unJust _ _ (Just x) = x
+unJust codec word Nothing = case allUnk of
+    (x:_)   -> x
+    []      -> error "unJust: Nothing and all values known"
+  where
+    allUnk = filter (not . hasLabel codec) (S.toList $ lbs word)
+
 -- -- | Replace 'Nothing' labels with all unknown labels from
 -- -- the set of potential interpretations.
 -- unJusts :: Ord b => Codec a b -> Word a b -> [Maybe b] -> [b]

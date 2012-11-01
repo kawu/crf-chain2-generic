@@ -39,13 +39,14 @@ library
       , Data.CRF.Chain2.Generic.Train
       , Data.CRF.Chain2.Pair.Base
       , Data.CRF.Chain2.Pair.Codec
+      , Data.CRF.Chain2.Pair
 
     other-modules:
         Data.CRF.Chain2.Generic.Internal
       , Data.CRF.Chain2.Generic.DP
       , Data.CRF.Chain2.Generic.Util
         
---     ghc-options: -Wall -O2
+    ghc-options: -Wall -O2
 
 source-repository head
     type: git

@@ -6,10 +6,11 @@ module Data.CRF.Chain2.Pair.Base
 , Lb2 (..)
 , Lb
 , Feat (..)
-, pairFeatGen
+, featGen
 ) where
 
-import Data.Binary (Binary)
+import Control.Applicative ((<$>), (<*>)) 
+import Data.Binary (Binary, get, put, Put, Get)
 
 import Data.CRF.Chain2.Generic.Model (FeatGen(..))
 
@@ -29,8 +30,36 @@ data Feat
     | TFeat1'2  {-# UNPACK #-} !Lb2
     deriving (Show, Eq, Ord)
 
-pairFeatGen :: FeatGen Ob (Lb1, Lb2) Feat
-pairFeatGen = FeatGen
+instance Binary Feat where
+    put (OFeat'1 o x)       = putI 0 >> put o >> put x
+    put (OFeat'2 o x)       = putI 1 >> put o >> put x
+    put (TFeat3'1 x y z)    = putI 2 >> put x >> put y >> put z
+    put (TFeat3'2 x y z)    = putI 3 >> put x >> put y >> put z
+    put (TFeat2'1 x y)      = putI 4 >> put x >> put y
+    put (TFeat2'2 x y)      = putI 5 >> put x >> put y
+    put (TFeat1'1 x)        = putI 6 >> put x
+    put (TFeat1'2 x)        = putI 7 >> put x
+    get = getI >>= \i -> case i of
+        0   -> OFeat'1  <$> get <*> get
+        1   -> OFeat'2  <$> get <*> get
+        2   -> TFeat3'1 <$> get <*> get <*> get
+        3   -> TFeat3'2 <$> get <*> get <*> get
+        4   -> TFeat2'1 <$> get <*> get
+        5   -> TFeat2'2 <$> get <*> get
+        6   -> TFeat1'1 <$> get
+        7   -> TFeat1'2 <$> get
+        _   -> error "get feature: unknown code"
+
+putI :: Int -> Put
+putI = put
+{-# INLINE putI #-}
+
+getI :: Get Int
+getI = get
+{-# INLINE getI #-}
+
+featGen :: FeatGen Ob (Lb1, Lb2) Feat
+featGen = FeatGen
     { obFeats   = obFeats'
     , trFeats1  = trFeats1'
     , trFeats2  = trFeats2'

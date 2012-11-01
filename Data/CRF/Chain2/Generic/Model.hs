@@ -6,6 +6,9 @@ module Data.CRF.Chain2.Generic.Model
 , FeatGen (..)
 , Model (..)
 , mkModel
+, Core (..)
+, core
+, withCore
 , phi
 , index
 , presentFeats
@@ -21,7 +24,7 @@ module Data.CRF.Chain2.Generic.Model
 
 import Control.Applicative ((<$>), (<*>))
 import Data.Maybe (maybeToList)
-import Data.Binary (Binary)
+import Data.Binary (Binary, put, get)
 import Data.Vector.Binary ()
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -51,6 +54,24 @@ data Model o t f = Model
     { values    :: U.Vector Double
     , ixMap     :: M.Map f FeatIx
     , featGen   :: FeatGen o t f }
+
+-- | A core of the model with no feature generation function.
+-- Unlike the 'Model', the core can be serialized. 
+data Core f = Core
+    { valuesC   :: U.Vector Double
+    , ixMapC    :: M.Map f FeatIx }
+
+instance (Ord f, Binary f) => Binary (Core f) where
+    put Core{..} = put valuesC >> put ixMapC
+    get = Core <$> get <*> get
+
+-- | Extract the model core.
+core :: Model o t f -> Core f
+core Model{..} = Core values ixMap
+
+-- | Construct model with the given core and feature generation function.
+withCore :: Core f -> FeatGen o t f -> Model o t f
+withCore Core{..} ftGen = Model valuesC ixMapC ftGen
 
 -- | Features present in the dataset element together with corresponding
 -- occurence probabilities.
@@ -135,15 +156,16 @@ obFeatsOn featGen xs i u = concat
 trFeatsOn
     :: FeatGen o t f -> Xs o t -> Int
     -> LbIx -> LbIx -> LbIx -> [f]
-trFeatsOn featGen xs i u v w =
+trFeatsOn featGen xs i u' v' w' =
     doIt a b c
   where
-    a = lbOn xs i       u
-    b = lbOn xs (i - 1) v
-    c = lbOn xs (i - 2) w
+    a = lbOn xs i       u'
+    b = lbOn xs (i - 1) v'
+    c = lbOn xs (i - 2) w'
     doIt (Just u) (Just v) (Just w) = trFeats3 featGen u v w
     doIt (Just u) (Just v) _        = trFeats2 featGen u v
     doIt (Just u) _ _               = trFeats1 featGen u
+    doIt _ _ _                      = []
 {-# INLINE trFeatsOn #-}
 
 onWord :: Ord f => Model o t f -> Xs o t -> Int -> LbIx -> L.LogFloat
