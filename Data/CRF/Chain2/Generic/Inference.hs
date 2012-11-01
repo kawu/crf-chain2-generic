@@ -72,7 +72,6 @@ zxAlpha acc sent alpha = acc
     [ alpha (n - 1) i j
     | i <- lbIxs sent (n - 1)
     , j <- lbIxs sent (n - 2) ]
-    -- | (i, j) <- lbIxs2 sent (n - 1) ]
     where n = V.length sent
 
 zx :: Ord f => Model o t f -> Xs o t -> L.LogFloat

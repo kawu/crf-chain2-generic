@@ -4,7 +4,9 @@ synopsis:           Second-order, generic, constrained, linear conditional rando
 description:
     The library provides implementation of the second-order, linear
     conditional random fields (CRFs) with position-wise constraints
-    imposed over label values and generic feature generation.
+    imposed over label values.  It provides a generic framework for
+    defining custom feature data types and feature generation
+    functions.
 license:            BSD3
 license-file:       LICENSE
 cabal-version:      >= 1.6
