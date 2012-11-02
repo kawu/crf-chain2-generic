@@ -1,12 +1,13 @@
 name:               crf-chain2-generic
-version:            0.1.1
+version:            0.2.0
 synopsis:           Second-order, generic, constrained, linear conditional random fields
 description:
     The library provides implementation of the second-order, linear
     conditional random fields (CRFs) with position-wise constraints
-    imposed over label values.  It provides a generic framework for
+    imposed over label values.  It also provides a generic framework for
     defining custom feature data types and feature generation
-    functions.
+    functions (see "Data.CRF.Chain2.Generic") together with
+    some concrete model examples (e.g. "Data.CRF.Chain2.Pair").
 license:            BSD3
 license-file:       LICENSE
 cabal-version:      >= 1.6
@@ -34,7 +35,7 @@ library
       , sgd >= 0.2.2 && < 0.3
 
     exposed-modules:
-        Data.CRF.Chain2.Generic.Base
+        Data.CRF.Chain2.Generic.Internal
       , Data.CRF.Chain2.Generic.External
       , Data.CRF.Chain2.Generic.Model
       , Data.CRF.Chain2.Generic.Inference
@@ -44,8 +45,7 @@ library
       , Data.CRF.Chain2.Pair
 
     other-modules:
-        Data.CRF.Chain2.Generic.Internal
-      , Data.CRF.Chain2.Generic.DP
+        Data.CRF.Chain2.Generic.DP
       , Data.CRF.Chain2.Generic.Util
         
     ghc-options: -Wall -O2

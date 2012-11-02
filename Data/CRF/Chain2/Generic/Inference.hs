@@ -20,7 +20,7 @@ import Control.Parallel.Strategies (rseq, parMap)
 import Control.Parallel (par, pseq)
 import GHC.Conc (numCapabilities)
 
-import Data.CRF.Chain2.Generic.Base
+import Data.CRF.Chain2.Generic.Internal
 import Data.CRF.Chain2.Generic.Model
 import Data.CRF.Chain2.Generic.Util (partition)
 import qualified Data.CRF.Chain2.Generic.DP as DP

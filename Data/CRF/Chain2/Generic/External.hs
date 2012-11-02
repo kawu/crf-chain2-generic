@@ -1,3 +1,5 @@
+-- | External data representation.
+
 module Data.CRF.Chain2.Generic.External
 ( Word (obs, lbs)
 , mkWord
@@ -11,8 +13,7 @@ module Data.CRF.Chain2.Generic.External
 import qualified Data.Set as S
 import qualified Data.Map as M
 
--- | A word with 'a' representing the observation type and 'b' representing
--- the compound label type.
+-- | A word consists of a set of observations and a set of potential labels.
 data Word a b = Word {
     -- | Set of observations.
       obs   :: S.Set a
@@ -27,6 +28,7 @@ mkWord _obs _lbs
     | S.null _lbs   = error "mkWord: empty set of potential labels"
     | otherwise     = Word _obs _lbs
 
+-- | A sentence of words.
 type Sent a b = [Word a b]
 
 -- | A probability distribution defined over elements of type a.

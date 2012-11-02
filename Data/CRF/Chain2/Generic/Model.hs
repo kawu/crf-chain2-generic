@@ -34,8 +34,7 @@ import qualified Data.Vector.Generic.Base as G
 import qualified Data.Vector.Generic.Mutable as G
 import qualified Data.Number.LogFloat as L
 
-import Data.CRF.Chain2.Generic.Base
-import qualified Data.CRF.Chain2.Generic.Internal as I
+import Data.CRF.Chain2.Generic.Internal
 
 -- | A feature index.  To every model feature a unique index is assigned.
 newtype FeatIx = FeatIx { unFeatIx :: Int }
@@ -179,27 +178,3 @@ onTransition
 onTransition crf xs i u w v =
     product . map (phi crf) $ trFeatsOn (featGen crf) xs i u w v
 {-# INLINE onTransition #-}
-
-lbNum :: Xs o t -> Int -> Int
-lbNum xs i
-    | i < 0 || i >= n   = 1
-    | otherwise         = I.lbNum xs i
-  where
-    n = V.length xs
-{-# INLINE lbNum #-}
-
-lbOn :: Xs o t -> Int -> LbIx -> Maybe t
-lbOn xs i
-    | i < 0 || i >= n   = const Nothing
-    | otherwise         = Just . I.lbOn xs i
-  where
-    n = V.length xs
-{-# INLINE lbOn #-}
-
-lbIxs :: Xs o t -> Int -> [LbIx]
-lbIxs xs i
-    | i < 0 || i >= n   = [0]
-    | otherwise         = I.lbIxs xs i
-  where
-    n = V.length xs
-{-# INLINE lbIxs #-}

@@ -36,7 +36,7 @@ import qualified Data.Vector as V
 import qualified Control.Monad.Codec as C
 
 import Data.CRF.Chain2.Pair.Base
-import Data.CRF.Chain2.Generic.Base
+import Data.CRF.Chain2.Generic.Internal
 import Data.CRF.Chain2.Generic.External
 
 -- | A codec.  The first component is used to encode observations

@@ -13,7 +13,7 @@ import qualified Data.Vector as V
 import qualified Numeric.SGD as SGD
 import qualified Numeric.SGD.LogSigned as L
 
-import Data.CRF.Chain2.Generic.Base
+import Data.CRF.Chain2.Generic.Internal
 import Data.CRF.Chain2.Generic.External (SentL)
 import Data.CRF.Chain2.Generic.Model
 import Data.CRF.Chain2.Generic.Inference (expectedFeatures, accuracy)
