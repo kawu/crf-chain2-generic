@@ -3,6 +3,7 @@
 module Data.CRF.Chain2.Pair
 ( 
 -- * Data types
+-- ** External
   Word (..)
 , mkWord
 , Sent
@@ -10,6 +11,12 @@ module Data.CRF.Chain2.Pair
 , mkDist
 , WordL
 , SentL
+-- * Internal
+, Ob (..)
+, Lb1 (..)
+, Lb2 (..)
+, Lb
+, Feat (..)
 
 -- * CRF
 , CRF (..)
@@ -17,13 +24,19 @@ module Data.CRF.Chain2.Pair
 , train
 -- ** Tagging
 , tag
+
+-- * Feature selection
+, FeatSel
+, selectHidden
+, selectPresent
 ) where
 
 import Control.Applicative ((<$>), (<*>)) 
 import Data.Binary (Binary, get, put)
 import qualified Numeric.SGD as SGD
 
-import Data.CRF.Chain2.Generic.Model (Model, core, withCore)
+import Data.CRF.Chain2.Generic.Model
+    (Model, FeatSel, selectHidden, selectPresent, core, withCore)
 import Data.CRF.Chain2.Generic.External
 import qualified Data.CRF.Chain2.Generic.Inference as I
 import qualified Data.CRF.Chain2.Generic.Train as T
@@ -51,18 +64,21 @@ codecSpec = T.CodecSpec
 -- When the evaluation data 'IO' action is 'Just', the iterative
 -- training process will notify the user about the current accuracy
 -- on the evaluation part every full iteration over the training part.
--- TODO: Add custom feature extraction function.
+-- Use the provided feature selection function to determine model
+-- features.
 train
     :: (Ord a, Ord b, Ord c)
     => SGD.SgdArgs                  -- ^ Args for SGD
+    -> FeatSel Ob Lb Feat           -- ^ Feature selection
     -> IO [SentL a (b, c)]          -- ^ Training data 'IO' action
     -> Maybe (IO [SentL a (b, c)])  -- ^ Maybe evalation data
     -> IO (CRF a b c)               -- ^ Resulting codec and model
-train sgdArgs trainIO evalIO'Maybe = do
+train sgdArgs featSel trainIO evalIO'Maybe = do
     (_codec, _model) <- T.train
         sgdArgs
         codecSpec
         featGen
+        featSel
         trainIO
         evalIO'Maybe
     return $ CRF _codec _model

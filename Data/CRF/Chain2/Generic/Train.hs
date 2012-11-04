@@ -33,16 +33,17 @@ train
     => SGD.SgdArgs                  -- ^ Args for SGD
     -> CodecSpec a b c o t          -- ^ Codec specification
     -> FeatGen o t f                -- ^ Feature generation
+    -> FeatSel o t f                -- ^ Feature selection
     -> IO [SentL a b]               -- ^ Training data 'IO' action
     -> Maybe (IO [SentL a b])       -- ^ Maybe evalation data
     -> IO (c, Model o t f)          -- ^ Resulting codec and model
-train sgdArgs CodecSpec{..} ftGen trainIO evalIO'Maybe = do
+train sgdArgs CodecSpec{..} ftGen ftSel trainIO evalIO'Maybe = do
     hSetBuffering stdout NoBuffering
     (codec, trainData) <- mkCodec <$> trainIO
     evalDataM <- case evalIO'Maybe of
         Just evalIO -> Just . encode codec <$> evalIO
         Nothing     -> return Nothing
-    let crf = mkModel ftGen (map fst trainData)
+    let crf = mkModel ftGen ftSel trainData
     para <- SGD.sgdM sgdArgs
         (notify sgdArgs crf trainData evalDataM)
         (gradOn crf) (V.fromList trainData) (values crf)

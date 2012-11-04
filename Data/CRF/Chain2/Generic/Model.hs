@@ -4,6 +4,9 @@
 module Data.CRF.Chain2.Generic.Model
 ( FeatIx (..)
 , FeatGen (..)
+, FeatSel
+, selectPresent
+, selectHidden
 , Model (..)
 , mkModel
 , Core (..)
@@ -116,10 +119,21 @@ hiddenFeats fg xs =
         , v <- lbIxs xs $ i - 1
         , w <- lbIxs xs $ i - 2 ]
 
--- | FINISH: Dodać ekstrację liczby cech ze zbioru danych,
--- zmienić funkcję mkModel.
-mkModel :: Ord f => FeatGen o t f -> [Xs o t] -> Model o t f
-mkModel fg dataset = Model
+-- | A feature selection function type.
+type FeatSel o t f = FeatGen o t f -> Xs o t -> Ys t -> [f]
+
+-- | The 'presentFeats' adapted to fit feature selection specs.
+selectPresent :: FeatSel o t f
+selectPresent fg xs = map fst . presentFeats fg xs
+
+-- | The 'hiddenFeats' adapted to fit feature selection specs.
+selectHidden :: FeatSel o t f
+selectHidden fg xs _ = hiddenFeats fg xs
+
+mkModel
+    :: Ord f => FeatGen o t f -> FeatSel o t f
+    -> [(Xs o t, Ys t)] -> Model o t f
+mkModel fg ftSel dataset = Model
     { values    = U.replicate (S.size fs) 0.0 
     , ixMap     =
         let featIxs = map FeatIx [0..]
@@ -127,7 +141,8 @@ mkModel fg dataset = Model
         in  M.fromList (zip featLst featIxs)
     , featGen   = fg }
   where
-    fs = S.fromList $ concatMap (hiddenFeats fg) dataset
+    fs = S.fromList $ concatMap select dataset
+    select = uncurry (ftSel fg)
 
 -- | Potential assigned to the feature -- exponential of the
 -- corresonding parameter.
