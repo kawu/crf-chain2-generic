@@ -23,6 +23,8 @@ library
     build-depends:
         base >= 4 && < 5
       , containers
+      , unordered-containers >= 0.2 && < 0.3
+      , hashable >= 1.0.1.1
       , array
       , vector
       , binary

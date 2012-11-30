@@ -11,6 +11,7 @@ module Data.CRF.Chain2.Pair.Base
 
 import Control.Applicative ((<$>), (<*>)) 
 import Data.Binary (Binary, get, put, Put, Get)
+import Data.Hashable (Hashable(..), combine)
 
 import Data.CRF.Chain2.Generic.Model (FeatGen(..))
 
@@ -20,15 +21,30 @@ newtype Lb2 = Lb2 { unLb2 :: Int } deriving (Show, Eq, Ord, Binary)
 type Lb = (Lb1, Lb2)
 
 data Feat
-    = OFeat'1   {-# UNPACK #-} !Ob  {-# UNPACK #-} !Lb1
-    | OFeat'2   {-# UNPACK #-} !Ob  {-# UNPACK #-} !Lb2
-    | TFeat3'1  {-# UNPACK #-} !Lb1 {-# UNPACK #-} !Lb1 {-# UNPACK #-} !Lb1
+    = TFeat3'1  {-# UNPACK #-} !Lb1 {-# UNPACK #-} !Lb1 {-# UNPACK #-} !Lb1
     | TFeat3'2  {-# UNPACK #-} !Lb2 {-# UNPACK #-} !Lb2 {-# UNPACK #-} !Lb2
     | TFeat2'1  {-# UNPACK #-} !Lb1 {-# UNPACK #-} !Lb1
     | TFeat2'2  {-# UNPACK #-} !Lb2 {-# UNPACK #-} !Lb2
     | TFeat1'1  {-# UNPACK #-} !Lb1
     | TFeat1'2  {-# UNPACK #-} !Lb2
+    | OFeat'1   {-# UNPACK #-} !Ob  {-# UNPACK #-} !Lb1
+    | OFeat'2   {-# UNPACK #-} !Ob  {-# UNPACK #-} !Lb2
     deriving (Show, Eq, Ord)
+
+instance Hashable Feat where
+    hash (TFeat3'1 x y z)   = 0 <> unLb1 x <> unLb1 y <> unLb1 z
+    hash (TFeat3'2 x y z)   = 1 <> unLb2 x <> unLb2 y <> unLb2 z
+    hash (TFeat2'1 x y)     = 2 <> unLb1 x <> unLb1 y
+    hash (TFeat2'2 x y)     = 3 <> unLb2 x <> unLb2 y
+    hash (TFeat1'1 x)       = 4 <> unLb1 x
+    hash (TFeat1'2 x)       = 5 <> unLb2 x
+    hash (OFeat'1 o x)      = 6 <> unOb o <> unLb1 x
+    hash (OFeat'2 o x)      = 7 <> unOb o <> unLb2 x
+    {-# INLINE hash #-}
+
+(<>) :: Int -> Int -> Int
+(<>) = combine
+{-# INLINE (<>) #-}
 
 instance Binary Feat where
     put (OFeat'1 o x)       = putI 0 >> put o >> put x

@@ -1,8 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Data.CRF.Chain2.Generic.Model
-( FeatIx (..)
+( Feature
+, FeatIx (..)
 , FeatGen (..)
 , FeatSel
 , selectPresent
@@ -29,8 +32,9 @@ import Control.Applicative ((<$>), (<*>))
 import Data.Maybe (maybeToList)
 import Data.Binary (Binary, put, get)
 import Data.Vector.Binary ()
+import Data.Hashable (Hashable)
+import qualified Data.HashMap.Strict as H
 import qualified Data.Set as S
-import qualified Data.Map as M
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Generic.Base as G
@@ -38,6 +42,9 @@ import qualified Data.Vector.Generic.Mutable as G
 import qualified Data.Number.LogFloat as L
 
 import Data.CRF.Chain2.Generic.Internal
+
+class (Ord f, Hashable f) => Feature f where
+instance (Ord f, Hashable f) => Feature f where
 
 -- | A feature index.  To every model feature a unique index is assigned.
 newtype FeatIx = FeatIx { unFeatIx :: Int }
@@ -54,18 +61,20 @@ data FeatGen o t f = FeatGen
 -- | A conditional random field.
 data Model o t f = Model
     { values    :: U.Vector Double
-    , ixMap     :: M.Map f FeatIx
+    -- , ixMap     :: M.Map f FeatIx
+    , ixMap     :: H.HashMap f FeatIx
     , featGen   :: FeatGen o t f }
 
 -- | A core of the model with no feature generation function.
 -- Unlike the 'Model', the core can be serialized. 
 data Core f = Core
     { valuesC   :: U.Vector Double
-    , ixMapC    :: M.Map f FeatIx }
+    -- , ixMapC    :: M.Map f FeatIx }
+    , ixMapC    :: H.HashMap f FeatIx }
 
-instance (Ord f, Binary f) => Binary (Core f) where
-    put Core{..} = put valuesC >> put ixMapC
-    get = Core <$> get <*> get
+instance (Feature f, Binary f) => Binary (Core f) where
+    put Core{..} = put valuesC >> put (H.toList ixMapC)
+    get = Core <$> get <*> (H.fromList <$> get)
 
 -- | Extract the model core.
 core :: Model o t f -> Core f
@@ -131,14 +140,14 @@ selectHidden :: FeatSel o t f
 selectHidden fg xs _ = hiddenFeats fg xs
 
 mkModel
-    :: Ord f => FeatGen o t f -> FeatSel o t f
+    :: Feature f => FeatGen o t f -> FeatSel o t f
     -> [(Xs o t, Ys t)] -> Model o t f
 mkModel fg ftSel dataset = Model
     { values    = U.replicate (S.size fs) 0.0 
     , ixMap     =
         let featIxs = map FeatIx [0..]
             featLst = S.toList fs
-        in  M.fromList (zip featLst featIxs)
+        in  H.fromList (zip featLst featIxs)
     , featGen   = fg }
   where
     fs = S.fromList $ concatMap select dataset
@@ -146,15 +155,15 @@ mkModel fg ftSel dataset = Model
 
 -- | Potential assigned to the feature -- exponential of the
 -- corresonding parameter.
-phi :: Ord f => Model o t f -> f -> L.LogFloat
-phi Model{..} ft = case M.lookup ft ixMap of
+phi :: Feature f => Model o t f -> f -> L.LogFloat
+phi Model{..} ft = case H.lookup ft ixMap of
     Just ix -> L.logToLogFloat (values U.! unFeatIx ix)
     Nothing -> L.logToLogFloat (0 :: Float)
 {-# INLINE phi #-}
 
 -- | Index of the feature.
-index :: Ord f => Model o t f -> f -> Maybe FeatIx
-index Model{..} ft = M.lookup ft ixMap
+index :: Feature f => Model o t f -> f -> Maybe FeatIx
+index Model{..} ft = H.lookup ft ixMap
 {-# INLINE index #-}
 
 obFeatsOn :: FeatGen o t f -> Xs o t -> Int -> LbIx -> [f]
@@ -182,13 +191,13 @@ trFeatsOn featGen xs i u' v' w' =
     doIt _ _ _                      = []
 {-# INLINE trFeatsOn #-}
 
-onWord :: Ord f => Model o t f -> Xs o t -> Int -> LbIx -> L.LogFloat
+onWord :: Feature f => Model o t f -> Xs o t -> Int -> LbIx -> L.LogFloat
 onWord crf xs i u =
     product . map (phi crf) $ obFeatsOn (featGen crf) xs i u
 {-# INLINE onWord #-}
 
 onTransition
-    :: Ord f => Model o t f -> Xs o t -> Int
+    :: Feature f => Model o t f -> Xs o t -> Int
     -> LbIx -> LbIx -> LbIx -> L.LogFloat
 onTransition crf xs i u w v =
     product . map (phi crf) $ trFeatsOn (featGen crf) xs i u w v

@@ -29,7 +29,7 @@ data CodecSpec a b c o t = CodecSpec
 -- on the evaluation part every full iteration over the training part.
 -- TODO: Add custom feature extraction function.
 train
-    :: (Ord a, Ord b, Eq t, Ord f)
+    :: (Ord a, Ord b, Eq t, Feature f)
     => SGD.SgdArgs                  -- ^ Args for SGD
     -> CodecSpec a b c o t          -- ^ Codec specification
     -> FeatGen o t f                -- ^ Feature generation
@@ -49,7 +49,7 @@ train sgdArgs CodecSpec{..} ftGen ftSel trainIO evalIO'Maybe = do
         (gradOn crf) (V.fromList trainData) (values crf)
     return (codec, crf { values = para })
 
-gradOn :: Ord f => Model o t f -> SGD.Para -> (Xs o t, Ys t) -> SGD.Grad
+gradOn :: Feature f => Model o t f -> SGD.Para -> (Xs o t, Ys t) -> SGD.Grad
 gradOn crf para (xs, ys) = SGD.fromLogList $
     [ (ix, L.fromPos val)
     | (ft, val) <- presentFeats (featGen curr) xs ys
@@ -61,7 +61,7 @@ gradOn crf para (xs, ys) = SGD.fromLogList $
     curr = crf { values = para }
 
 notify
-    :: (Eq t, Ord f) => SGD.SgdArgs -> Model o t f -> [(Xs o t, Ys t)]
+    :: (Eq t, Feature f) => SGD.SgdArgs -> Model o t f -> [(Xs o t, Ys t)]
     -> Maybe [(Xs o t, Ys t)] -> SGD.Para -> Int -> IO ()
 notify SGD.SgdArgs{..} crf trainData evalDataM para k 
     | doneTotal k == doneTotal (k - 1) = putStr "."
