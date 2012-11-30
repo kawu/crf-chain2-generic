@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 -- | Internal core data types.
 
 module Data.CRF.Chain2.Generic.Internal
@@ -21,6 +23,10 @@ module Data.CRF.Chain2.Generic.Internal
 , lbNum
 , lbIxs
 
+-- * Feature index
+
+, FeatIx (..)
+
 -- * Auxiliary
 , LbIx
 , AVec (unAVec)
@@ -29,9 +35,14 @@ module Data.CRF.Chain2.Generic.Internal
 , mkAVec2
 ) where
 
+import Data.Binary (Binary)
 import qualified Data.Set as S
 import qualified Data.Map as M
+import qualified Data.Array.Unboxed as A
 import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as U
+import qualified Data.Vector.Generic.Base as G
+import qualified Data.Vector.Generic.Mutable as G
 
 -- | An index of the label.
 type LbIx = Int
@@ -156,3 +167,8 @@ lbIxs xs i
   where
     n = V.length xs
 {-# INLINE lbIxs #-}
+
+-- | A feature index.  To every model feature a unique index is assigned.
+newtype FeatIx = FeatIx { unFeatIx :: Int }
+    deriving ( Show, Eq, Ord, Binary, A.IArray A.UArray
+             , G.Vector U.Vector, G.MVector U.MVector, U.Unbox )

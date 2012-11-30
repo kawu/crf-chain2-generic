@@ -14,6 +14,7 @@ import qualified Numeric.SGD as SGD
 import qualified Numeric.SGD.LogSigned as L
 
 import Data.CRF.Chain2.Generic.Internal
+import Data.CRF.Chain2.Generic.FeatMap
 import Data.CRF.Chain2.Generic.External (SentL)
 import Data.CRF.Chain2.Generic.Model
 import Data.CRF.Chain2.Generic.Inference (expectedFeatures, accuracy)
@@ -29,14 +30,14 @@ data CodecSpec a b c o t = CodecSpec
 -- on the evaluation part every full iteration over the training part.
 -- TODO: Add custom feature extraction function.
 train
-    :: (Ord a, Ord b, Eq t, Feature f)
+    :: (Ord a, Ord b, Eq t, Ord f, FeatMap m f)
     => SGD.SgdArgs                  -- ^ Args for SGD
     -> CodecSpec a b c o t          -- ^ Codec specification
     -> FeatGen o t f                -- ^ Feature generation
     -> FeatSel o t f                -- ^ Feature selection
     -> IO [SentL a b]               -- ^ Training data 'IO' action
     -> Maybe (IO [SentL a b])       -- ^ Maybe evalation data
-    -> IO (c, Model o t f)          -- ^ Resulting codec and model
+    -> IO (c, Model m o t f)        -- ^ Resulting codec and model
 train sgdArgs CodecSpec{..} ftGen ftSel trainIO evalIO'Maybe = do
     hSetBuffering stdout NoBuffering
     (codec, trainData) <- mkCodec <$> trainIO
@@ -49,7 +50,9 @@ train sgdArgs CodecSpec{..} ftGen ftSel trainIO evalIO'Maybe = do
         (gradOn crf) (V.fromList trainData) (values crf)
     return (codec, crf { values = para })
 
-gradOn :: Feature f => Model o t f -> SGD.Para -> (Xs o t, Ys t) -> SGD.Grad
+gradOn
+    :: FeatMap m f => Model m o t f
+    -> SGD.Para -> (Xs o t, Ys t) -> SGD.Grad
 gradOn crf para (xs, ys) = SGD.fromLogList $
     [ (ix, L.fromPos val)
     | (ft, val) <- presentFeats (featGen curr) xs ys
@@ -61,7 +64,7 @@ gradOn crf para (xs, ys) = SGD.fromLogList $
     curr = crf { values = para }
 
 notify
-    :: (Eq t, Feature f) => SGD.SgdArgs -> Model o t f -> [(Xs o t, Ys t)]
+    :: (Eq t, FeatMap m f) => SGD.SgdArgs -> Model m o t f -> [(Xs o t, Ys t)]
     -> Maybe [(Xs o t, Ys t)] -> SGD.Para -> Int -> IO ()
 notify SGD.SgdArgs{..} crf trainData evalDataM para k 
     | doneTotal k == doneTotal (k - 1) = putStr "."

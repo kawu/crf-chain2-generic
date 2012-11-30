@@ -43,10 +43,11 @@ import qualified Data.CRF.Chain2.Generic.Train as T
 
 import Data.CRF.Chain2.Pair.Base
 import Data.CRF.Chain2.Pair.Codec
+import Data.CRF.Chain2.Pair.FeatMap
 
 data CRF a b c = CRF
     { codec :: Codec a b c
-    , model :: Model Ob Lb Feat }
+    , model :: Model FeatMap Ob Lb Feat }
 
 instance (Ord a, Ord b, Ord c, Binary a, Binary b, Binary c)
     => Binary (CRF a b c) where
