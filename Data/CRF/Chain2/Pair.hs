@@ -37,29 +37,32 @@ import qualified Numeric.SGD as SGD
 
 import Data.CRF.Chain2.Generic.Model
     (Model, FeatSel, selectHidden, selectPresent, core, withCore)
+import Data.CRF.Chain2.Generic.Codec
 import Data.CRF.Chain2.Generic.External
 import qualified Data.CRF.Chain2.Generic.Inference as I
 import qualified Data.CRF.Chain2.Generic.Train as T
 
 import Data.CRF.Chain2.Pair.Base
-import Data.CRF.Chain2.Pair.Codec
 import Data.CRF.Chain2.Pair.FeatMap
+import Data.CRF.Chain2.Pair.Codec (codec, CodecData)
 
 data CRF a b c = CRF
-    { codec :: Codec a b c
-    , model :: Model FeatMap Ob Lb Feat }
+    { codecData :: CodecData a b c
+    , model     :: Model FeatMap Ob Lb Feat }
 
 instance (Ord a, Ord b, Ord c, Binary a, Binary b, Binary c)
     => Binary (CRF a b c) where
-    put CRF{..} = put codec >> put (core model)
+    put CRF{..} = put codecData >> put (core model)
     get = CRF <$> get <*> do
         _core <- get
         return $ withCore _core featGen
 
-codecSpec :: (Ord a, Ord b, Ord c) => T.CodecSpec a (b, c) (Codec a b c) Ob Lb
+codecSpec
+    :: (Ord a, Ord b, Ord c)
+    => T.CodecSpec a (b, c) (CodecData a b c) Ob Lb
 codecSpec = T.CodecSpec
-    { T.mkCodec = mkCodec
-    , T.encode  = encodeDataL }
+    { T.mkCodec = mkCodec codec
+    , T.encode  = encodeDataL codec }
 
 -- | Train the CRF using the stochastic gradient descent method.
 -- When the evaluation data 'IO' action is 'Just', the iterative
@@ -75,22 +78,22 @@ train
     -> Maybe (IO [SentL a (b, c)])  -- ^ Maybe evalation data
     -> IO (CRF a b c)               -- ^ Resulting codec and model
 train sgdArgs featSel trainIO evalIO'Maybe = do
-    (_codec, _model) <- T.train
+    (_codecData, _model) <- T.train
         sgdArgs
         codecSpec
         featGen
         featSel
         trainIO
         evalIO'Maybe
-    return $ CRF _codec _model
+    return $ CRF _codecData _model
 
 -- | Find the most probable label sequence.
 tag :: (Ord a, Ord b, Ord c) => CRF a b c -> Sent a (b, c) -> [(b, c)]
 tag CRF{..} sent
-    = onWords . decodeLabels codec
-    . I.tag model . encodeSent codec
+    = onWords . decodeLabels codec codecData
+    . I.tag model . encodeSent codec codecData
     $ sent
   where
     onWords xs =
-        [ unJust codec word x
+        [ unJust codec codecData word x
         | (word, x) <- zip sent xs ]

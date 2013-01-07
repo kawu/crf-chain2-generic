@@ -39,6 +39,7 @@ import Data.CRF.Chain2.Generic.External
 -- | A codec monad.
 type CodecM c a = C.Codec c a
 
+-- | An abstract codec representation.
 data Codec a b c = Codec {
     -- | Empty codec.
       empty     :: c
