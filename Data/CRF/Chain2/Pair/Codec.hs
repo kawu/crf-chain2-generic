@@ -63,7 +63,7 @@ lb2Max =
     let idMax m = M.size m - 1
     in  Lb2 . idMax . C.to . _3
 
-codec :: (Ord a, Ord b, Ord c) => Codec a (b, c) (CodecData a b c)
+codec :: (Ord a, Ord b, Ord c) => Codec a (b, c) (CodecData a b c) Ob Lb
 codec = Codec
     { empty = 
         ( C.empty
